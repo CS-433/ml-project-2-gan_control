@@ -33,6 +33,8 @@ def create_adjacency_matrix(feature_matrix, verbose=False):
         for other_vehicle_id in range(len(feature_matrix)):
             if vehicle_id == other_vehicle_id:
                 continue
+
+            # NOTE: THIS ASSUMED THAT THE FIRST TWO FEATURES ARE THE X AND Y POSITIONS OF THE CAR
             if abs(feature_matrix[vehicle_id][0] - feature_matrix[other_vehicle_id][0]) <= MAX_DX and \
                     abs(feature_matrix[vehicle_id][1] - feature_matrix[other_vehicle_id][1]) <= MAX_DY:
 

@@ -7,6 +7,8 @@ Allows the current decision maker to be overriden with your RL input
 
 import numpy as np
 
+from agents.graphs import GraphFactory
+
 
 # Notes:
 # - Feel free to edit this file as appropriate, changing template names requires changes troughout code base
@@ -26,7 +28,7 @@ class RLAgent:
     """
 
     def __init__(self):
-        self.vehicleFeatures = []
+        self.node_features = []
         self.decision = float('nan')
 
     def fetchVehicleFeatures(self, features):
@@ -39,10 +41,10 @@ class RLAgent:
 
         # Now we have (#vehicles, #features) where features = (px, py, v, theta, vehicle_type)
         # And the truck is index 0
-        self.vehicleFeatures = features[:, 0, :].T
-
-        print(self.vehicleFeatures.shape, self.vehicleFeatures)
+        self.node_features = features[:, 0, :].T
 
     def getDecision(self):
-        # Returns final decision for RL agents
+        # Constructs the graph
+        graph = GraphFactory.create_graph(self.node_features)
+
         return self.decision
