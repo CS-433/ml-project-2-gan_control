@@ -5,13 +5,11 @@ Allows the current decision maker to be overriden with your RL input
  - Decision encoding: [0,1,2,NaN] = [left change, right change, no change, let MPC decide]
 """
 
-import numpy as np
-
-from agents.graphs import GraphFactory
+from agents.graphs import GraphFactory, draw_graph, create_adjacency_matrix
 
 
 # Notes:
-# - Feel free to edit this file as appropriate, changing template names requires changes troughout code base
+# - Feel free to edit this file as appropriate, changing template names requires changes throughout code base
 
 class RLAgent:
     """
@@ -43,8 +41,19 @@ class RLAgent:
         # And the truck is index 0
         self.node_features = features[:, 0, :].T
 
+        # Now we turn the absolute position in to relative coordinates with respect to the truck
+        truck_x, truck_y = self.node_features[0, :2]
+        self.node_features[:, 0] -= truck_x
+        self.node_features[:, 1] -= truck_y
+
     def getDecision(self):
         # Constructs the graph
-        graph = GraphFactory.create_graph(self.node_features)
+        max_dist_edge_creator = lambda feature_matrix: create_adjacency_matrix(feature_matrix, max_dx=100, max_dy=100)
+        graph, node_id_to_vehicle_id_mapping = GraphFactory.create_graph(self.node_features,
+                                                                         adjacency_matrix_function=max_dist_edge_creator)
+
+        # This is for visualizing the graph that was created along with its features
+        draw_graph(self.node_features, graph, node_id_to_vehicle_id_mapping, min_x=-150, max_x=150, min_y=-10, max_y=10)
+        print(self.node_features)
 
         return self.decision

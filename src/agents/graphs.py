@@ -1,19 +1,56 @@
 import numpy as np
 import torch
 from torch_geometric.data import Data
+from torch_geometric.utils import to_networkx
 
+import matplotlib.pyplot as plt
 import networkx as nx
 
 
-def create_adjacency_matrix(feature_matrix, verbose=False):
+def draw_graph(feature_matrix, graph, node_id_to_vehicle_id_mapping, min_x=-50, max_x=50, min_y=-50, max_y=50, save_name=''):
+    """
+    Draws the graph and print its nodes' feature information
+    :param save_name: The filename of the figure in case it needs to be exported
+    :param max_y: The maximum y-coordinate to plot
+    :param min_y: The minimum y-coordinate to plot
+    :param max_x: The maximum x-coordinate to plot
+    :param min_x: The minimum x-coordinate to plot
+    :param feature_matrix: The features of every vehicle
+    :param graph: The graph that was created by the GraphFactory
+    :param node_id_to_vehicle_id_mapping: The mapping from node ids to vehicle ids
+    :return: Nothing, but plots the graph and prints its nodes' features
+    """
+    # Compute the positions to plot the graph on
+    positions = {
+        n_id: [(feature_matrix[v_id][0] - min_x) / (max_x - min_x), (feature_matrix[v_id][1] - min_y) / (max_y - min_y)]
+        for n_id, v_id in node_id_to_vehicle_id_mapping.items()
+    }
+
+    # We add "Vehicle" in front of the label to help match the nodes in the graph
+    for k, v in node_id_to_vehicle_id_mapping.items():
+        node_id_to_vehicle_id_mapping[k] = "Vehicle " + str(v)
+
+    g = to_networkx(graph, to_undirected=True)
+    nx.draw(g, pos=positions, labels=node_id_to_vehicle_id_mapping)
+
+    if save_name != '':
+        plt.savefig(save_name)
+
+    plt.show()
+
+    for i, features in enumerate(graph.x):
+        print(node_id_to_vehicle_id_mapping[i], features)
+
+
+def create_adjacency_matrix(feature_matrix, verbose=False, max_dx=10, max_dy=30):
     """
     Default "adjacency matrix" creation function. Each of these functions MUST follow the same method signature
+    :param max_dy: The maximum y-distance between two neighboring vertices
+    :param max_dx: The maximum x-distance between two neighboring vertices
+    :param verbose: Whether to print the breath-first search process
     :param feature_matrix: Shape (#vehicles, #features) where the first index is the truck
     :return: A list of edge tuples, the vehicle ids in the subgraph, and a mapping from node ids to vehicle ids
     """
-
-    MAX_DX = 10  # We can for example make this equal to the size of the lanes
-    MAX_DY = 10
 
     edge_list = set()
     connected_idxs = {0}
@@ -35,8 +72,8 @@ def create_adjacency_matrix(feature_matrix, verbose=False):
                 continue
 
             # NOTE: THIS ASSUMED THAT THE FIRST TWO FEATURES ARE THE X AND Y POSITIONS OF THE CAR
-            if abs(feature_matrix[vehicle_id][0] - feature_matrix[other_vehicle_id][0]) <= MAX_DX and \
-                    abs(feature_matrix[vehicle_id][1] - feature_matrix[other_vehicle_id][1]) <= MAX_DY:
+            if abs(feature_matrix[vehicle_id][0] - feature_matrix[other_vehicle_id][0]) <= max_dx and \
+                    abs(feature_matrix[vehicle_id][1] - feature_matrix[other_vehicle_id][1]) <= max_dy:
 
                 if other_vehicle_id not in vehicle_id_to_node_id_mapping.keys():
                     vehicle_id_to_node_id_mapping[other_vehicle_id] = map_ctr
@@ -109,22 +146,4 @@ if __name__ == '__main__':
 
     graph, node_id_to_vehicle_id_mapping = GraphFactory.create_graph(feature_matrix)
 
-    from torch_geometric.utils import to_networkx
-    import matplotlib.pyplot as plt
-
-    # Compute the positions to plot the graph on
-    positions = {
-        n_id: [(feature_matrix[v_id][0] - min_x)/(max_x - min_x), (feature_matrix[v_id][1] - min_y)/(max_y - min_y)]
-        for n_id, v_id in node_id_to_vehicle_id_mapping.items()
-    }
-
-    # We add "Vehicle" in front of the label to help match the nodes in the graph
-    for k, v in node_id_to_vehicle_id_mapping.items():
-        node_id_to_vehicle_id_mapping[k] = "Vehicle " + str(v)
-
-    g = to_networkx(graph, to_undirected=True)
-    nx.draw(g, pos=positions, labels=node_id_to_vehicle_id_mapping)
-    plt.show()
-
-    for i, features in enumerate(graph.x):
-        print(node_id_to_vehicle_id_mapping[i], features)
+    draw_graph(feature_matrix, graph, node_id_to_vehicle_id_mapping, min_x, max_x, min_y, max_y)
