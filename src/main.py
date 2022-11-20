@@ -7,7 +7,7 @@ from traffic import vehicleSUMO, combinedTraffic
 from controllers import makeController, makeDecisionMaster
 from helpers import *
 
-from agents.templateRLagent import RLAgent
+from agents.templateRLagent import DQNAgent
 
 # Set Gif-generation
 makeMovie = True
@@ -22,7 +22,7 @@ ref_vx = 60 / 3.6  # Higway speed limit in (m/s)
 
 # -------------------------- Initilize RL agents object ----------------------------------
 # The agents is feed to the decision maker, changing names requries changing troughout code base
-RL_Agent = RLAgent()
+RL_Agent = DQNAgent()
 
 # ----------------- Ego Vehicle Dynamics and Controller Settings ------------------------
 vehicleADV = vehBicycleKinematic(dt, N)

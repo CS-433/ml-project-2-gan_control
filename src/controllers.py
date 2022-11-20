@@ -525,7 +525,7 @@ class makeDecisionMaster:
             self.doRight = 1
 
         # Set controller decision based on RL agent
-        self.RL_decision = self.rl_agent.getDecision()
+        self.RL_decision = self.rl_agent.choose_action()
 
         if not(np.isnan(self.RL_decision)):
             if self.RL_decision == 0:
