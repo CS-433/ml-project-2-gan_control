@@ -122,7 +122,8 @@ class DQNAgent:
     - decision: Current decision made by the RL agents
     """
 
-    def __init__(self, device, num_node_features, n_actions, gamma, target_copy_delay, learning_rate, batch_size, epsilon,
+    def __init__(self, device, num_node_features, n_actions, gamma, target_copy_delay, learning_rate, batch_size,
+                 epsilon,
                  epsilon_dec=1e-3, epsilon_min=0.01, memory_size=1_000_000, file_name='models/dqn_model.pt'):
         """
         Args:
@@ -299,3 +300,31 @@ class DQNAgent:
         if file_path == '':
             file_path = self.model_file
         self.policy_net.load_state_dict(torch.load(file_path))
+
+
+if __name__ == '__main__':
+    # This is just an example graph
+
+    # Just for drawing on correct positions
+    min_x, max_x, min_y, max_y = 50, 150, 50, 150
+
+    feature_matrix = np.array([
+        [100.0, 100],  # Vehicle 0
+        [111, 111],  # Vehicle 1
+        [90, 90],  # Vehicle 2
+        [80, 90],  # Vehicle 3
+        [80, 80],  # Vehicle 4
+        [100, 110],  # Vehicle 5
+        [60, 70],  # Vehicle 6
+        [95, 95],  # Vehicle 7
+        [120, 100]
+    ])
+
+    graph, node_id_to_vehicle_id_mapping = GraphFactory.create_graph(feature_matrix)
+
+    # draw_graph(feature_matrix, graph, node_id_to_vehicle_id_mapping, min_x, max_x, min_y, max_y)
+
+    nn = GATQNetwork(2, 10, 4)
+
+    with torch.no_grad():
+        print(nn(graph))

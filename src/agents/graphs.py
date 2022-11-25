@@ -122,7 +122,8 @@ class GraphFactory:
 
         # Creates a homogeneous graph, more information on
         # https://pytorch-geometric.readthedocs.io/en/latest/notes/introduction.html#data-handling-of-graphs
-        generated_graph = Data(x=used_vehicle_features, edge_index=edge_tuple_list.t().contiguous())
+        generated_graph = Data(x=torch.tensor(used_vehicle_features, dtype=torch.float32),
+                               edge_index=edge_tuple_list.t().contiguous())
 
         return generated_graph, node_id_to_vehicle_id_mapping
 
@@ -141,9 +142,10 @@ if __name__ == '__main__':
         [80, 80],  # Vehicle 4
         [100, 110],  # Vehicle 5
         [60, 70],  # Vehicle 6
-        [95, 95]  # Vehicle 7
+        [95, 95],  # Vehicle 7
+        [120, 100]
     ])
 
     graph, node_id_to_vehicle_id_mapping = GraphFactory.create_graph(feature_matrix)
 
-    draw_graph(feature_matrix, graph, node_id_to_vehicle_id_mapping, min_x, max_x, min_y, max_y)
+    #draw_graph(feature_matrix, graph, node_id_to_vehicle_id_mapping, min_x, max_x, min_y, max_y)
