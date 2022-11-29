@@ -2,9 +2,9 @@
 Author: Erik Börve, borerik@chalmers.se  
 
  ## Purpose
- This project provides an implementation of an autonomous truck in a multi-lane highway scenario. The controller utilizes non linear optimal control to compute multiple feasible trajectories, of which the most cost-efficent is choosen.
+ This project provides an implementation of an autonomous truck in a multi-lane highway scenario. The controller utilizes non linear optimal control to compute multiple feasible trajectories, of which the most cost-efficent is choosen. The simulation is setup to be suitable for RL training.
  
- ![](https://github.com/BorveErik/Autonomous-Truck-Sim/blob/main/simRes.gif)
+ ![](https://github.com/BorveErik/Autonomous-Truck-Sim/blob/RL_training_env/simRes.gif)
 
  ## Getting Started
 
@@ -20,7 +20,7 @@ Locate the repo and run:
 
 
 ## Usage
-Simulations are run via the "main" file. This is also where simulations are configured, including e.g., designing traffic scenarios and setting up the optimal controllers.
+Simulations are run via the "main" file. This is also where simulations are configured, including e.g., designing traffic scenarios and setting up the optimal controllers. The number and length of the episodes can also be configured
 
  ## Project Structure
 The projects contains the following files.
@@ -30,7 +30,7 @@ The projects contains the following files.
 ├── Data_example
     └── ex1.csv
     └── metaData_ex1.txt
-├── .gitignore
+├── gitignore
 ├── helpers.py
 ├── main.py
 ├── README.md

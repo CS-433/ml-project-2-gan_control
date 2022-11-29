@@ -589,7 +589,7 @@ class makeDecisionMaster:
             decision_i = np.argmin(np.array([costL,costR,costT]))
             self.decisionLog.insert(0,decision_i)
         
-        print('Decision: ',self.controllers[decision_i].opts["version"])
+        # print('Decision: ',self.controllers[decision_i].opts["version"])
         
         if decision_i == 0:
             X = x_testL

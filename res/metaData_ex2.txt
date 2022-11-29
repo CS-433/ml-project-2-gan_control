@@ -1,0 +1,22 @@
+Metadata for provided data sets
+---------------------------------
+
+General
+------
+Data is provided in a (N_x,Nveh*N_sim) matrix
+ - Splitting this into (N_x,Nveh,N_sim) tensor seems suitable
+
+class encoding: [0,1,2,3] = [truck,passive,normal,aggressive]
+Lane encoding: [-1,0,1] = [right,center,left]
+
+Data is provided in a minimal state representation
+x = [x-position,y-position,x-velocity,steering angle,class,lane]
+
+This dataset
+--------------
+N_episodes = 50 
+dist_max = 500 (goal distance in simulation)
+N_x  = 6  (Number of vehicle features)
+Nveh = 6 (Number of vehicles in simulation)
+dt_sim = 0.2 (Simulation time steps (sec))
+dt_ctrl = 1 (Controler decision time steps (sec) )
