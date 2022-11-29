@@ -38,7 +38,7 @@ class ReplayBuffer:
         max_mem = min(self.mem_counter, self.mem_size)
 
         # Samples uniformly random batches of size batch_size (with replacement)
-        batch_idxs = np.randint(high=max_mem, size=(batch_size,))
+        batch_idxs = np.random.randint(low=0, high=max_mem, size=(batch_size,))
 
         # Extract the tensors with the transitions and put them onto the computation device
         states = self.state_mem[batch_idxs]
@@ -79,7 +79,8 @@ class GATQNetwork(torch.nn.Module):
     def __init__(self, num_node_features, hidden_dim_size, num_actions):
         super(GATQNetwork, self).__init__()
 
-        self.gat1 = GATConv(in_channels=num_node_features, out_channels=num_node_features)
+        # Note: we already add self loops in the graph factory
+        self.gat1 = GATConv(in_channels=num_node_features, out_channels=num_node_features, add_self_loops=False)
         self.dense_1 = torch.nn.Linear(num_node_features, hidden_dim_size)
         self.output_layer = torch.nn.Linear(hidden_dim_size, num_actions)
 
@@ -123,8 +124,8 @@ class DQNAgent:
     """
 
     def __init__(self, device, num_node_features, n_actions, gamma, target_copy_delay, learning_rate, batch_size,
-                 epsilon,
-                 epsilon_dec=1e-3, epsilon_min=0.01, memory_size=1_000_000, file_name='models/dqn_model.pt'):
+                 epsilon, epsilon_dec=1e-3, epsilon_min=0.01, memory_size=1_000_000,
+                 file_name='out/models/dqn_model.pt'):
         """
         Args:
             device: CPU or GPU to put the data on (used for computations)
@@ -171,7 +172,7 @@ class DQNAgent:
         self.target_net = copy.deepcopy(self.policy_net)
 
         # Mean squared error loss between target and predicted Q-values
-        self.loss = torch.nn.SmoothL1Loss(beta=0.5)  # nn.MSELoss()
+        self.loss = torch.nn.MSELoss()  # torch.nn.SmoothL1Loss(beta=0.5)
 
         # Optimizer used to update the network parameters
         self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=learning_rate)
@@ -214,7 +215,7 @@ class DQNAgent:
 
         if np.random.random() >= self.epsilon:
             with torch.no_grad():
-                q_pred = self.policy_net.forward(state)
+                q_pred = self.policy_net(state)
                 # Choose the action by taking the largest Q-value
                 action = torch.argmax(q_pred).item()
         return action
@@ -232,22 +233,22 @@ class DQNAgent:
 
         # Predict the Q-values in the current state, and in the new state (after taking the action)
         # Unfortunately we cannot do this in parallel
-        q_preds = torch.zeros(size=(self.batch_size,), dtype=torch.float32, device=self.device)
+        q_preds = torch.zeros(size=(self.batch_size, len(self.actions)), dtype=torch.float32, device=self.device)
         for i, state in enumerate(states):
             state = state.to(device=self.device)
-            q_preds[i] = self.policy_net.forward(state)
+            q_preds[i] = self.policy_net(state)
 
         # If C = 0, we would update the network at every iteration, which would be crazy inefficient
         # It equals training without a target network
-        q_targets = torch.zeros(size=(self.batch_size,), dtype=torch.float32, device=self.device)
+        q_targets = torch.zeros(size=(self.batch_size, len(self.actions)), dtype=torch.float32, device=self.device)
         if self.C == 0:
             for i, state in enumerate(new_states):
                 state = state.to(device=self.device)
-                q_targets[i] = self.policy_net.forward(state)
+                q_targets[i] = self.policy_net(state)
         else:
             for i, state in enumerate(new_states):
                 state = state.to(device=self.device)
-                q_targets[i] = self.target_net.forward(state)
+                q_targets[i] = self.target_net(state)
 
         # For every sampled transition, set the target for the action that was taken as
         # defined earlier: r + gamma * max_a' Q(s', a')
@@ -263,8 +264,8 @@ class DQNAgent:
         output = self.loss(y, q_preds[batch_idxs, actions.long()]).to(self.device)
         output.backward()
 
-        # Clamp the gradients in a range between -1 and 1
-        torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 1.0)
+        # Clamp the gradients in a range between -1 and 1 (Only with Huber loss, for now we use MSE)
+        # torch.nn.utils.clip_grad_value_(self.policy_net.parameters(), 1.0)
 
         self.optimizer.step()
 

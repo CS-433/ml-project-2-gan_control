@@ -1,4 +1,5 @@
 # Packages
+import torch
 from casadi import *
 import numpy as np
 
@@ -9,7 +10,7 @@ from traffic import vehicleSUMO, combinedTraffic
 from controllers import makeController, makeDecisionMaster
 from helpers import *
 
-from templateRLagent import RLAgent
+from agents.templateRLagent import DQNAgent
 
 # Set Gif-generation
 makeMovie = False
@@ -27,7 +28,17 @@ ref_vx = 60 / 3.6  # Highway speed limit in (m/s)
 N_episodes = 10  # Number of scenarios run created
 dist_max = 500  # Goal distance for the vehicle to travel. If reached, epsiode terminates
 
-RL_Agent = RLAgent()
+# Settings for the RL agent
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+num_node_features = 6
+n_actions = 3
+gamma = 0.9
+target_copy_delay = 0
+learning_rate = 10E-3
+batch_size = 32
+epsilon = 0.01
+
+RL_Agent = DQNAgent(device, num_node_features, n_actions, gamma, target_copy_delay, learning_rate, batch_size, epsilon)
 
 # ----------------- Ego Vehicle Dynamics and Controller Settings ------------------------
 vehicleADV = vehBicycleKinematic(dt, N)
@@ -159,11 +170,17 @@ for j in range(0, N_episodes):
     # # Simulation loop
     i = i_crit
     runSimulation = True
+
+    # For the experience replay of the RL agent
+    previous_state = None
+    action = None
+    reward = 0
+
     while runSimulation:
+
         # Update feature map for RL agent
         feature_map_i = createFeatureMatrix(vehicleADV, traffic)
         feature_map[:, i:] = feature_map_i
-        RL_Agent.fetchVehicleFeatures(feature_map_i)
 
         # Get current traffic state
         x_lead[:, :] = traffic.prediction()[0, :, :].transpose()
@@ -175,12 +192,25 @@ for j in range(0, N_episodes):
             # print('Step: ', i-i_crit)
             decisionMaster.storeInput([x_iter, refxL_out, refxR_out, refxT_out, refu_out, x_lead, traffic_state])
 
+            # Experience replay for the RL agent, only None if we are at the first iteration
+            if previous_state is not None:
+                RL_Agent.store_transition(previous_state, action, reward, feature_map_i, terminal_state=False)
+
             # Update reference based on current lane
             refxL_out, refxR_out, refxT_out = decisionMaster.updateReference()
 
+            RL_Agent.learn()
+
             # Compute optimal control action
-            x_test, u_test, X_out = decisionMaster.chooseController()
+            x_test, u_test, X_out, selected_action = decisionMaster.chooseController(feature_map_i)
             u_iter = u_test[:, 0]
+
+            # Update the state for the RL agent, reset the reward to be accumulated
+            previous_state, action, reward = feature_map_i, selected_action, 0
+
+        # TODO: We can add the reward to the reward function in this loop
+        # This example just add a reward of 1 at every iteration
+        reward += 1
 
         # Update traffic and store data
         X[:, i] = x_iter

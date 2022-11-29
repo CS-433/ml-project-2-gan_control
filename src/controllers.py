@@ -506,7 +506,7 @@ class makeDecisionMaster:
         self.traffic_state[3,:,:] = shift.T
         self.traffic_state[4,:,:] = flip.T
 
-    def chooseController(self):
+    def chooseController(self, state_features):
         """
         Main function, finds optimal choice of controller for the current step
         """
@@ -525,7 +525,7 @@ class makeDecisionMaster:
             self.doRight = 1
 
         # Set controller decision based on RL agent
-        self.RL_decision = self.rl_agent.choose_action()
+        self.RL_decision = self.rl_agent.choose_action(state_features)
 
         if not(np.isnan(self.RL_decision)):
             if self.RL_decision == 0:
@@ -605,7 +605,7 @@ class makeDecisionMaster:
 
         x_ok, u_ok, X = self.checkSolution(X,U)
 
-        return x_ok,u_ok, X
+        return x_ok,u_ok, X, self.RL_decision
 
     def getErrorCount(self):
         """

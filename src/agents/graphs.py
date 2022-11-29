@@ -64,6 +64,9 @@ def create_adjacency_matrix(feature_matrix, verbose=False, max_dx=10, max_dy=30)
     while len(q) > 0:
         vehicle_id = q.pop(0)
 
+        # We add self loops (needed for the GNNs)
+        edge_list.add((vehicle_id_to_node_id_mapping[vehicle_id], vehicle_id_to_node_id_mapping[vehicle_id]))
+
         if verbose:
             print(vehicle_id)
 
@@ -148,4 +151,4 @@ if __name__ == '__main__':
 
     graph, node_id_to_vehicle_id_mapping = GraphFactory.create_graph(feature_matrix)
 
-    #draw_graph(feature_matrix, graph, node_id_to_vehicle_id_mapping, min_x, max_x, min_y, max_y)
+    draw_graph(feature_matrix, graph, node_id_to_vehicle_id_mapping, min_x, max_x, min_y, max_y)
