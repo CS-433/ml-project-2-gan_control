@@ -1,3 +1,8 @@
+import argparse
+import time
+import json
+import os
+
 # Packages
 import torch
 from casadi import *
@@ -13,36 +18,144 @@ from helpers import *
 
 from agents.templateRLagent import DQNAgent
 
+# ----------------------------------------------------------
+# Constants
+# ----------------------------------------------------------
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+# hyperparameters required to be included in the hyperparam config file
+# dictionary values indicate the type of value required for each hyperparam
+REQ_HYPERPARAMS = {"gamma": "float", "target_copy_delay": "int",
+                   "learning_rate": "float", "batch_size": "int",
+                   "epsilon": "float", "epsilon_dec": "float",
+                   "epsilon_min": "float", "memory_size": "int"}
+REQ_HYPERPARAM_DESC = ', '.join(['%s (%s)' % (k,v)
+                                 for k,v in REQ_HYPERPARAMS.items()])
+
+
+num_node_features = 6
+n_actions = 3
+
+
 # Set Gif-generation
 makeMovie = False
 directory = r"C:\Phd\Student_Projects\GNN_RL_EPFL\Latest_code_local\simRes.gif"
 
-# System initialization 
-dt = 0.2  # Simulation time step (Impacts traffic model accuracy)
-f_controller = 5  # Controller update frequency, i.e updates at each t = dt*f_controller
-N = 12  # MPC Horizon length
+# ----------------------------------------------------------
+# Parse command line argments
+# ----------------------------------------------------------
 
-ref_vx = 60 / 3.6  # Highway speed limit in (m/s)
+ap = argparse.ArgumentParser(description='Train DeepQN RL agent for lane changing decisions')
+
+ap.add_argument("-H", "--hyperparam_config", required=True,
+                help=("Path to json file containing the hyperparameters for " +
+                      "training the GNN. Must define the following " +
+                      "hyperparameters: " + REQ_HYPERPARAM_DESC))
+
+ap.add_argument("-l", "--log_dir", default='../out/runs',
+                help=("Directory in which to store logs. Default ../out/runs"))
+
+ap.add_argument("-e", "--num_episodes", type=int, default=100,
+                help=("Number of episodes to run simulation for. Default 100"))
+
+ap.add_argument("-d", "--max_dist", type=int, default=500,
+                help=("Goal distance for vehicle to travel. Simulation " +
+                      "terminates if this is reached. Default 500m"))
+
+ap.add_argument("-t", "--time_step", type=float, default=0.2,
+                help=("Simulation time step. Default 0.2s"))
+
+ap.add_argument("-f", "--controller_frequency", type=int, default=5,
+                help=("Controller update frequency. Updates at each f " +
+                      "timesteps. Default 5"))
+
+ap.add_argument("-s", "--speed_limit", type=int, default=60,
+                help=("Highway speed limit (km/h). Default 60"))
+
+ap.add_argument("-N", "--horizon_length", type=int, default=12,
+                help=("MPC horizon length. Default 12 "))
+
+ap.add_argument("-T", "--simulation_time", type=int, default=100,
+                help=("Maximum total simulation time (s). Default 100"))
+
+ap.add_argument("-E", "--exp_id", default='',
+                help=("Optional ID for the experiment"))
+
+args = ap.parse_args()
+
+#-----------------------------------------------------
+# validate and parse hyperparameter configuration file
+
+hp_file = args.hyperparam_config
+assert os.path.exists(hp_file), ("ERROR: hyperparam config file not found.")
+# try loading the json file
+try:
+    with open(hp_file, 'r', encoding='utf-8') as f:
+        hps = json.load(f)
+# if the json couldn't be decoded, exit and inform user that config file
+# wasn't a valid json file
+except json.JSONDecodeError:
+    sys.exit("Hyperparameter config file is not a valid json file.")
+# cmake sure it contains all required params and nothing else
+hyperparams = {}
+for hp in REQ_HYPERPARAMS.keys():
+    assert (hp in hps), hp + " hyperparameter missing from config file"
+    hyperparams[hp] = hps[hp]
+
+#------------------
+# configure logging
+
+log_dir = args.log_dir
+assert os.path.exists(log_dir), "Invalid log directory (must already exist)"
+
+# append timestamp to exp ID in case multiple of the same ID is run
+exp_id = args.exp_id + '_' + str(time.time())
+
+exp_log_dir = os.path.join(log_dir, exp_id)
+if not os.path.exists(exp_log_dir):
+    os.makedirs(exp_log_dir)
+    print(f"Created experiment log directory at {exp_log_dir}")
+
+# create a directory inside experiment directory to store tensorboard logs
+tensorboard_log_dir = os.path.join(exp_log_dir, 'tensorboard_logs')
+if not os.path.exists(tensorboard_log_dir):
+    os.makedirs(tensorboard_log_dir)
+    print(f"Created tensorboard log directory at {tensorboard_log_dir}")
+
+# this is done to allow us to log all script parameters and hyperparameters
+# together
+args.hyperparam_config = hyperparams
+
+#----------------------
+# System initialization
+
+dt = args.time_step  # Simulation time step (Impacts traffic model accuracy)
+f_controller = args.controller_frequency  # Controller update frequency, i.e updates at each t = dt*f_controller
+N = args.horizon_length  # MPC Horizon length
+
+ref_vx = args.speed_limit / 3.6  # Highway speed limit in (m/s)
+
+tsim = args.simulation_time  # Maximum total simulation time in seconds
+
+
+N_episodes = args.num_episodes  # Number of scenarios run created
+dist_max = args.max_dist  # Goal distance for the vehicle to travel. If reached, epsiode terminates
 
 # -------------------------- Initilize RL agent object ----------------------------------
-# The agent is feed to the decision maker, changing names requries changing troughout code base
-N_episodes = 100  # Number of scenarios run created
-dist_max = 500  # Goal distance for the vehicle to travel. If reached, epsiode terminates
 
-# Settings for the RL agent
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-num_node_features = 6
-n_actions = 3
-gamma = 0.9
-target_copy_delay = 0
-learning_rate = 10E-3
-batch_size = 32
-epsilon = 0.01
+RL_Agent = DQNAgent(device, num_node_features, n_actions, **hyperparams)
 
-RL_Agent = DQNAgent(device, num_node_features, n_actions, gamma, target_copy_delay, learning_rate, batch_size, epsilon)
+# -------------------------- Set logging ----------------------------------
 
 # Settings for Tensorboard, which records the training and outputs results
-writer = SummaryWriter(log_dir='../out/runs')
+writer = SummaryWriter(log_dir=tensorboard_log_dir)
+
+# save all input arguments to a json log file for reproducibility
+param_log_file = os.path.join(exp_log_dir, 'experiment_parameters.json')
+with open(param_log_file, 'w', encoding='utf-8') as f:
+    json.dump(vars(args), f, ensure_ascii=False, indent=4)
+print(f"Saved input parameter log file to {param_log_file}")
 
 # ----------------- Ego Vehicle Dynamics and Controller Settings ------------------------
 vehicleADV = vehBicycleKinematic(dt, N)
@@ -132,7 +245,6 @@ decisionMaster.setDecisionCost(q_ADV_decision)  # Sets cost of changing decision
 # # -----------------------------------------------------------------
 
 # Constants over all episodes
-tsim = 100  # Maximum total simulation time in seconds
 Nsim = int(tsim / dt)
 tspan = np.linspace(0, tsim, Nsim)
 
