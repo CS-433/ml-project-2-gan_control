@@ -4,4 +4,6 @@ __pycache__
 simData.csv
 simRes.gif
 
+out/runs
+
 .idea

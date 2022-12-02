@@ -2,6 +2,7 @@
 import torch
 from casadi import *
 import numpy as np
+from torch.utils.tensorboard import SummaryWriter
 
 # Classes and helpers
 from vehicleModelGarage import vehBicycleKinematic
@@ -39,6 +40,9 @@ batch_size = 32
 epsilon = 0.01
 
 RL_Agent = DQNAgent(device, num_node_features, n_actions, gamma, target_copy_delay, learning_rate, batch_size, epsilon)
+
+# Settings for Tensorboard, which records the training and outputs results
+writer = SummaryWriter(log_dir='../out/runs')
 
 # ----------------- Ego Vehicle Dynamics and Controller Settings ------------------------
 vehicleADV = vehBicycleKinematic(dt, N)
@@ -159,6 +163,8 @@ feature_map = np.zeros((6, Nsim, Nveh + 1))
 i_crit = 0
 traffic.reset()
 
+overall_iters = 0
+
 # # Episode iteration
 for j in range(0, N_episodes):
     print("Episode: ", j + 1)
@@ -166,6 +172,8 @@ for j in range(0, N_episodes):
     x_iter = DM(int(nx), 1)
     x_iter[:], u_iter = vehicleADV.getInit()
     vehicleADV.update(x_iter, u_iter)
+
+    eps_iters = 0
 
     # # Simulation loop
     i = i_crit
@@ -186,6 +194,12 @@ for j in range(0, N_episodes):
         x_lead[:, :] = traffic.prediction()[0, :, :].transpose()
         traffic_state[:2, :, ] = traffic.prediction()[:2, :, :]
 
+        # Record the velocity of the vehicle
+        writer.add_scalars('Overall/Velocity', {'Velocity': feature_map_i[2][0][0],
+                                                'Maximum Velocity': ref_vx}, overall_iters)
+
+        writer.add_scalars('Episode_' + str(j) + '/Velocity', {'Velocity': feature_map_i[2][0][0],
+                                                               'Maximum Velocity': ref_vx}, eps_iters)
         # Initialize master controller
         if (i - i_crit) % f_controller == 0:
             # print("----------")
@@ -198,6 +212,9 @@ for j in range(0, N_episodes):
 
             # Update reference based on current lane
             refxL_out, refxR_out, refxT_out = decisionMaster.updateReference()
+
+            writer.add_scalar('Overall/Rewards', reward, overall_iters)
+            writer.add_scalar('Episode_' + str(j) + '/Rewards', reward, eps_iters)
 
             RL_Agent.learn()
 
@@ -244,6 +261,9 @@ for j in range(0, N_episodes):
         traffic.tryRespawn(x_iter[0])
         X_traffic[:, i, :] = traffic.getStates()
         X_traffic_ref[:, i, :] = traffic.getReference()
+
+        eps_iters += 1
+        overall_iters += 1
 
     i_crit = i
     # Prepare for next simulation
