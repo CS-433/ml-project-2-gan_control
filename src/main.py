@@ -26,7 +26,7 @@ ref_vx = 60 / 3.6  # Highway speed limit in (m/s)
 
 # -------------------------- Initilize RL agent object ----------------------------------
 # The agent is feed to the decision maker, changing names requries changing troughout code base
-N_episodes = 10  # Number of scenarios run created
+N_episodes = 100  # Number of scenarios run created
 dist_max = 500  # Goal distance for the vehicle to travel. If reached, epsiode terminates
 
 # Settings for the RL agent
@@ -208,6 +208,7 @@ for j in range(0, N_episodes):
 
             # Experience replay for the RL agent, only None if we are at the first iteration
             if previous_state is not None:
+                reward /= f_controller
                 RL_Agent.store_transition(previous_state, action, reward, feature_map_i, terminal_state=False)
 
             # Update reference based on current lane
@@ -226,8 +227,8 @@ for j in range(0, N_episodes):
             previous_state, action, reward = feature_map_i, selected_action, 0
 
         # TODO: We can add the reward to the reward function in this loop
-        # This example just add a reward of 1 at every iteration
-        reward += 1
+        # This just adds the difference of the velocity with the speed limit onto the reward sum
+        reward += min(0, feature_map_i[2][0][0] - ref_vx)
 
         # Update traffic and store data
         X[:, i] = x_iter
