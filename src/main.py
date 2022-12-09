@@ -18,6 +18,8 @@ from helpers import *
 
 from agents.templateRLagent import DQNAgent
 
+np.random.seed(1)
+
 # ----------------------------------------------------------
 # Constants
 # ----------------------------------------------------------
