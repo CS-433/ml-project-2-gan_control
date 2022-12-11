@@ -113,7 +113,14 @@ def change_to_relative_pos(feature_matrix):
 
     return feature_matrix
 
-def preprocess_state_features(state_features):
+def rescale_speeds_relative_to_limit(feature_matrix, speed_lim):
+    feature_matrix = copy.deepcopy(feature_matrix)
+    feature_matrix[:, 2] = (feature_matrix[:, 2] - speed_lim) / speed_lim
+
+    return feature_matrix
+
+
+def preprocess_state_features(state_features, speed_lim):
     # preprocesses the state feature matrix to prepare it for graph creation.
     # returns the updated state_feature matrix, and the associated lane mask
 
@@ -131,6 +138,9 @@ def preprocess_state_features(state_features):
     # change the coordinate system to be centered at the truck
     # Now we have (#vehicles, #features) where features = (px, py, v, theta, vehicle_type, lane_num)
     state_features = change_to_relative_pos(state_features[:, 0, :].T)
+
+    state_features = rescale_speeds_relative_to_limit(state_features, speed_lim)
+
     # get mask for disallowed lane changes
     lane_mask = _lane_num_to_lane_mask(state_features[0, -1])
     # remove lane number and vehicle type features
@@ -149,7 +159,7 @@ def get_best_valid_action(q_vals, lane_mask):
     decision_mask = torch.cat((lane_mask, torch.BoolTensor([False])))
     # bit dodgy but set q vals for any invalid decision to less than min
     masked_q_vals = torch.where(decision_mask, q_vals.min()-.1, q_vals)
-    
+
     best_action = torch.argmax(masked_q_vals).item()
     q_max = torch.max(masked_q_vals)
 
@@ -178,7 +188,7 @@ class DQNAgent:
     - decision: Current decision made by the RL agents
     """
 
-    def __init__(self, device, num_node_features, n_actions, gamma, target_copy_delay, learning_rate, batch_size,
+    def __init__(self, device, num_node_features, n_actions, speed_lim, gamma, target_copy_delay, learning_rate, batch_size,
                  epsilon, epsilon_dec=1e-3, epsilon_min=0.01, memory_size=1_000_000,
                  file_name='out/models/dqn_model.pt'):
         """
@@ -186,6 +196,7 @@ class DQNAgent:
             device: CPU or GPU to put the data on (used for computations)
             input_shape: The dimensionality of the observation space
             n_actions: The number of possible actions
+            speed_lim: Speed limit of highway/road
             gamma: The discount factor
             target_copy_delay: The number of iterations before synchronizing the policy- to the target network
             learning_rate: The learning rate
@@ -202,6 +213,8 @@ class DQNAgent:
         self.edge_creator = lambda feature_matrix: create_adjacency_matrix(feature_matrix, max_dx=100, max_dy=100)
 
         self.actions = [i for i in range(n_actions)]
+
+        self.speed_lim = speed_lim
 
         self.gamma = gamma
         self.learning_rate = learning_rate
@@ -242,8 +255,8 @@ class DQNAgent:
         # features are as follows: [px, py, v, theta, vehicle_type, lane_num]
         # My thought is that the "1" was added for a batch size, but we can get rid of it for now
 
-        state_features, lane_mask = preprocess_state_features(state_features)
-        next_state_features, _ = preprocess_state_features(next_state_features)
+        state_features, lane_mask = preprocess_state_features(state_features, self.speed_lim)
+        next_state_features, _ = preprocess_state_features(next_state_features, self.speed_lim)
 
         # Constructs the actual state graphs
         state, _ = GraphFactory.create_graph(state_features, adjacency_matrix_function=self.edge_creator)
@@ -261,7 +274,8 @@ class DQNAgent:
         Returns:
             The action to perform
         """
-        state_features, lane_mask = preprocess_state_features(state_features)
+        state_features, lane_mask = preprocess_state_features(state_features, self.speed_lim)
+        print(state_features)
         decision_mask = lane_mask.tolist()
         # 0 is left, 1 is right, 2 is continue straight. straight is always
         # an option so this decision should never be masked (for out simple

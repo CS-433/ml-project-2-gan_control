@@ -146,7 +146,7 @@ dist_max = args.max_dist  # Goal distance for the vehicle to travel. If reached,
 
 # -------------------------- Initilize RL agent object ----------------------------------
 
-RL_Agent = DQNAgent(device, num_node_features, n_actions, **hyperparams)
+RL_Agent = DQNAgent(device, num_node_features, n_actions, ref_vx, **hyperparams)
 
 # -------------------------- Set logging ----------------------------------
 
