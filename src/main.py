@@ -369,7 +369,7 @@ for j in range(0, N_episodes):
         elif (x_iter[1].full().item() > roadMax) or (x_iter[1].full().item() < roadMin):
             # Truck de-rails from road
             runSimulation = False
-            print('Simulation finished: Crash Occured')
+            print('Simulation finished: Derail Occured')
         else:
             i += 1
 
@@ -380,6 +380,9 @@ for j in range(0, N_episodes):
         eps_iters += 1
         overall_iters += 1
 
+    writer.add_scalar('Overall/Episode_Iterations', eps_iters, j)
+    writer.add_scalar('Overall/Episode_Distances', x_iter[0].full().item(), j)
+
     i_crit = i
     # Prepare for next simulation
     traffic.reset()
@@ -387,6 +390,8 @@ for j in range(0, N_episodes):
     X_traffic_ref[:, i, :] = traffic.getReference()
 
 print("Simulation finished")
+
+RL_Agent.save_model(os.path.join(exp_log_dir, 'final_model.pt'))
 
 # -----------------------------------------------------------------
 # -----------------------------------------------------------------
