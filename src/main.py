@@ -36,7 +36,7 @@ REQ_HYPERPARAM_DESC = ', '.join(['%s (%s)' % (k,v)
                                  for k,v in REQ_HYPERPARAMS.items()])
 
 
-num_node_features = 6
+num_node_features = 4
 n_actions = 3
 
 

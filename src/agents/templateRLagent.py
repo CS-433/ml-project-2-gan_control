@@ -33,6 +33,7 @@ class ReplayBuffer:
         self.reward_mem = torch.zeros(self.mem_size, dtype=torch.float32)
         self.new_state_mem = np.empty(shape=(self.mem_size,), dtype=object)
         self.terminal_mem = torch.zeros(self.mem_size, dtype=torch.int32)
+        self.lane_mask = torch.zeros((self.mem_size, 2), dtype=torch.bool)
 
     def sample_transitions(self, batch_size):
         max_mem = min(self.mem_counter, self.mem_size)
@@ -46,10 +47,11 @@ class ReplayBuffer:
         rewards = self.reward_mem[batch_idxs].to(self.device)
         new_states = self.new_state_mem[batch_idxs]
         terminals = self.terminal_mem[batch_idxs].to(self.device)
+        lane_masks = self.lane_mask[batch_idxs].to(self.device)
 
-        return states, actions, rewards, new_states, terminals
+        return states, actions, rewards, new_states, terminals, lane_masks
 
-    def store_transition(self, state, action, reward, state_, terminal):
+    def store_transition(self, state, action, reward, state_, terminal, lane_mask):
         idx = self.mem_counter % self.mem_size
         self.mem_counter += 1
 
@@ -59,6 +61,8 @@ class ReplayBuffer:
         self.new_state_mem[idx] = state_
         # If terminal -> 0, else 1 (used as multiplicative factor, since terminal states have a value of 0)
         self.terminal_mem[idx] = 1 - int(terminal)
+        self.lane_mask[idx] = lane_mask
+
 
     def reset(self):
         self.mem_counter = 0
@@ -68,6 +72,7 @@ class ReplayBuffer:
         self.reward_mem = torch.zeros(self.mem_size, dtype=torch.float32)
         self.new_state_mem = np.empty(shape=(self.mem_size,), dtype=object)
         self.terminal_mem = torch.zeros(self.mem_size, dtype=torch.bool)
+        self.lane_mask = torch.zeros((self.mem_size, 2), dtype=torch.bool)
 
 
 # TODO: This is just an example configuration, we need to see what we actually want to do!
@@ -107,6 +112,56 @@ def change_to_relative_pos(feature_matrix):
     feature_matrix[:, 1] -= truck_y
 
     return feature_matrix
+
+def preprocess_state_features(state_features):
+    # preprocesses the state feature matrix to prepare it for graph creation.
+    # returns the updated state_feature matrix, and the associated lane mask
+
+    def _lane_num_to_lane_mask(lane_num, leftmost_lane=-1, rightmost_lane=1):
+        # function to convert lane number to a lane mask. returns a torch
+        # BoolTensor of length 2, where the first and second values indicate if
+        # the left and right lane changes should be masked respectively
+        ## PROBABLY SHOULD MOVE THIS FUNCTION ELSEWHERE BUT NOT SURE THE BEST
+        ## PLACE TO PUT IT
+        return torch.BoolTensor([lane_num == leftmost_lane,
+                                 lane_num == rightmost_lane])
+
+    # size(features) = (#features, 1, #vehicles + 1) where "+1" comes from the truck
+    # features[:, :, 0] is the truck
+    # change the coordinate system to be centered at the truck
+    # Now we have (#vehicles, #features) where features = (px, py, v, theta, vehicle_type, lane_num)
+    state_features = change_to_relative_pos(state_features[:, 0, :].T)
+    # get mask for disallowed lane changes
+    lane_mask = _lane_num_to_lane_mask(state_features[0, -1])
+    # remove lane number and vehicle type features
+    state_features = state_features[:, :-2]
+
+    return state_features, lane_mask
+
+
+def get_best_valid_action(q_vals, lane_mask):
+    # returns the action with highest q value (along with the q value itself)
+    # after removing invalid actions according to the lane mask
+
+    # 0 is left, 1 is right, 2 is continue straight. straight is always
+    # an option so this decision should never be masked (for out simple
+    # scenario at least where lanes don't reduce etc.)
+    decision_mask = torch.cat((lane_mask, torch.BoolTensor([False])))
+    # bit dodgy but set q vals for any invalid decision to less than min
+    masked_q_vals = torch.where(decision_mask, q_vals.min()-.1, q_vals)
+    
+    best_action = torch.argmax(masked_q_vals).item()
+    q_max = torch.max(masked_q_vals)
+
+    # print(lane_mask)
+    # print(q_vals)
+    # print(decision_mask)
+    # print(masked_q_vals)
+    # print(best_action)
+    # print(q_max)
+    # print('\n\n')
+
+    return best_action, q_max
 
 
 class DQNAgent:
@@ -177,25 +232,24 @@ class DQNAgent:
         # Optimizer used to update the network parameters
         self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=learning_rate)
 
+
     def store_transition(self, state_features, action, reward, next_state_features, terminal_state):
         # TODO: We will need to store these vehicle features from inside the training loop
         # Fetches the most recent vehicle features, automatically refreshes each simulation step
         # The features are as follows:
         # size(features) = (#features, 1, #vehicles + 1) where "+1" comes from the truck
         # features[:, :, 0] is the truck
-        # features are as follows: [px, py, v, theta, vehicle_type]
+        # features are as follows: [px, py, v, theta, vehicle_type, lane_num]
         # My thought is that the "1" was added for a batch size, but we can get rid of it for now
 
-        # Now we have (#vehicles, #features) where features = (px, py, v, theta, vehicle_type)
-        # And the truck is index 0. We also change the coordinate system to be centered at the truck
-        state_features = change_to_relative_pos(state_features[:, 0, :].T)
-        next_state_features = change_to_relative_pos(next_state_features[:, 0, :].T)
+        state_features, lane_mask = preprocess_state_features(state_features)
+        next_state_features, _ = preprocess_state_features(next_state_features)
 
         # Constructs the actual state graphs
         state, _ = GraphFactory.create_graph(state_features, adjacency_matrix_function=self.edge_creator)
         next_state, _ = GraphFactory.create_graph(next_state_features, adjacency_matrix_function=self.edge_creator)
 
-        self.replay_buffer.store_transition(state, action, reward, next_state, terminal_state)
+        self.replay_buffer.store_transition(state, action, reward, next_state, terminal_state, lane_mask)
 
     def choose_action(self, state_features):
         """
@@ -207,17 +261,24 @@ class DQNAgent:
         Returns:
             The action to perform
         """
-        state_features = change_to_relative_pos(state_features[:, 0, :].T)
+        state_features, lane_mask = preprocess_state_features(state_features)
+        decision_mask = lane_mask.tolist()
+        # 0 is left, 1 is right, 2 is continue straight. straight is always
+        # an option so this decision should never be masked (for out simple
+        # scenario at least where lanes don't reduce etc.)
+        decision_mask.append(False)
+
         state, _ = GraphFactory.create_graph(state_features, adjacency_matrix_function=self.edge_creator)
         state = state.to(device=self.device)
 
-        action = np.random.choice(self.actions)
+        possible_actions = [a for i, a in enumerate(self.actions) if not decision_mask[i]]
+        action = np.random.choice(possible_actions)
 
         if np.random.random() >= self.epsilon:
             with torch.no_grad():
                 q_pred = self.policy_net(state)
                 # Choose the action by taking the largest Q-value
-                action = torch.argmax(q_pred).item()
+                action, _ = get_best_valid_action(q_pred, lane_mask)
         return action
 
     def learn(self):
@@ -229,7 +290,7 @@ class DQNAgent:
             return
 
         # Sample from the replay buffer
-        states, actions, rewards, new_states, terminals = self.replay_buffer.sample_transitions(self.batch_size)
+        states, actions, rewards, new_states, terminals, lane_masks = self.replay_buffer.sample_transitions(self.batch_size)
 
         # Predict the Q-values in the current state, and in the new state (after taking the action)
         # Unfortunately we cannot do this in parallel
@@ -240,19 +301,23 @@ class DQNAgent:
 
         # If C = 0, we would update the network at every iteration, which would be crazy inefficient
         # It equals training without a target network
-        q_targets = torch.zeros(size=(self.batch_size, len(self.actions)), dtype=torch.float32, device=self.device)
+        q_targets = torch.zeros(size=(self.batch_size,), dtype=torch.float32, device=self.device)
         if self.C == 0:
             for i, state in enumerate(new_states):
                 state = state.to(device=self.device)
-                q_targets[i] = self.policy_net(state)
+                _, max_q = get_best_valid_action(self.policy_net(state),
+                                                 lane_masks[i])
+                q_targets[i] = max_q
         else:
             for i, state in enumerate(new_states):
                 state = state.to(device=self.device)
-                q_targets[i] = self.target_net(state)
+                _, max_q = get_best_valid_action(self.target_net(state),
+                                                 lane_masks[i])
+                q_targets[i] = max_q
 
         # For every sampled transition, set the target for the action that was taken as
         # defined earlier: r + gamma * max_a' Q(s', a')
-        y = rewards + self.gamma * terminals * torch.max(q_targets, dim=1)[0]
+        y = rewards + self.gamma * terminals * q_targets
 
         # Get a list of indices [0, 1, ..., batch_size-1]
         batch_idxs = torch.arange(self.batch_size, dtype=torch.long)
