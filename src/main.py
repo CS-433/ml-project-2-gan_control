@@ -24,7 +24,8 @@ np.random.seed(1)
 # Constants
 # ----------------------------------------------------------
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cpu')
+# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # hyperparameters required to be included in the hyperparam config file
 # dictionary values indicate the type of value required for each hyperparam
@@ -32,17 +33,15 @@ REQ_HYPERPARAMS = {"gamma": "float", "target_copy_delay": "int",
                    "learning_rate": "float", "batch_size": "int",
                    "epsilon": "float", "epsilon_dec": "float",
                    "epsilon_min": "float", "memory_size": "int"}
-REQ_HYPERPARAM_DESC = ', '.join(['%s (%s)' % (k,v)
-                                 for k,v in REQ_HYPERPARAMS.items()])
-
+REQ_HYPERPARAM_DESC = ', '.join(['%s (%s)' % (k, v)
+                                 for k, v in REQ_HYPERPARAMS.items()])
 
 num_node_features = 4
 n_actions = 3
 
-
 # Set Gif-generation
 makeMovie = False
-directory = r"C:\Phd\Student_Projects\GNN_RL_EPFL\Latest_code_local\simRes.gif"
+directory = "sim_render"
 
 # ----------------------------------------------------------
 # Parse command line argments
@@ -86,7 +85,7 @@ ap.add_argument("-E", "--exp_id", default='',
 
 args = ap.parse_args()
 
-#-----------------------------------------------------
+# -----------------------------------------------------
 # validate and parse hyperparameter configuration file
 
 hp_file = args.hyperparam_config
@@ -105,7 +104,7 @@ for hp in REQ_HYPERPARAMS.keys():
     assert (hp in hps), hp + " hyperparameter missing from config file"
     hyperparams[hp] = hps[hp]
 
-#------------------
+# ------------------
 # configure logging
 
 log_dir = args.log_dir
@@ -129,7 +128,7 @@ if not os.path.exists(tensorboard_log_dir):
 # together
 args.hyperparam_config = hyperparams
 
-#----------------------
+# ----------------------
 # System initialization
 
 dt = args.time_step  # Simulation time step (Impacts traffic model accuracy)
@@ -139,7 +138,6 @@ N = args.horizon_length  # MPC Horizon length
 ref_vx = args.speed_limit / 3.6  # Highway speed limit in (m/s)
 
 tsim = args.simulation_time  # Maximum total simulation time in seconds
-
 
 N_episodes = args.num_episodes  # Number of scenarios run created
 dist_max = args.max_dist  # Goal distance for the vehicle to travel. If reached, epsiode terminates
@@ -279,6 +277,11 @@ traffic.reset()
 
 overall_iters = 0
 
+import matplotlib
+
+matplotlib.use('qt5Agg')
+matplotlib.pyplot.ion()
+
 # # Episode iteration
 for j in range(0, N_episodes):
     print("Episode: ", j + 1)
@@ -319,6 +322,10 @@ for j in range(0, N_episodes):
             # print("----------")
             # print('Step: ', i-i_crit)
             decisionMaster.storeInput([x_iter, refxL_out, refxR_out, refxT_out, refu_out, x_lead, traffic_state])
+
+            fig = plotScene(feature_map_i, scenarioADV, vehicleADV, vehList)
+            plt.show()
+            plt.pause(0.02)
 
             # Experience replay for the RL agent, only None if we are at the first iteration
             if previous_state is not None:
@@ -384,6 +391,7 @@ for j in range(0, N_episodes):
     writer.add_scalar('Overall/Episode_Distances', x_iter[0].full().item(), j)
 
     i_crit = i
+
     # Prepare for next simulation
     traffic.reset()
     X_traffic[:, i, :] = traffic.getStates()
@@ -401,8 +409,8 @@ RL_Agent.save_model(os.path.join(exp_log_dir, 'final_model.pt'))
 
 # Creates animation of traffic scenario
 
-if makeMovie:
-    borvePictures(X, X_traffic, X_traffic_ref, vehList, X_pred, vehicleADV, scenarioADV, traffic, i_crit, f_controller,
-                  directory)
-
-features2CSV(feature_map, Nveh, Nsim)
+# if makeMovie:
+#     borvePictures(X, X_traffic, X_traffic_ref, vehList, X_pred, vehicleADV, scenarioADV, traffic, i_crit, f_controller,
+#                   directory)
+#
+# features2CSV(feature_map, Nveh, Nsim)

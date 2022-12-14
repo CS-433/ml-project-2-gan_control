@@ -63,7 +63,6 @@ class ReplayBuffer:
         self.terminal_mem[idx] = 1 - int(terminal)
         self.lane_mask[idx] = lane_mask
 
-
     def reset(self):
         self.mem_counter = 0
 
@@ -113,6 +112,7 @@ def change_to_relative_pos(feature_matrix):
 
     return feature_matrix
 
+
 def rescale_speeds_relative_to_limit(feature_matrix, speed_lim):
     feature_matrix = copy.deepcopy(feature_matrix)
     feature_matrix[:, 2] = (feature_matrix[:, 2] - speed_lim) / speed_lim
@@ -124,7 +124,7 @@ def preprocess_state_features(state_features, speed_lim):
     # preprocesses the state feature matrix to prepare it for graph creation.
     # returns the updated state_feature matrix, and the associated lane mask
 
-    def _lane_num_to_lane_mask(lane_num, leftmost_lane=-1, rightmost_lane=1):
+    def _lane_num_to_lane_mask(lane_num, leftmost_lane=1, rightmost_lane=-1):
         # function to convert lane number to a lane mask. returns a torch
         # BoolTensor of length 2, where the first and second values indicate if
         # the left and right lane changes should be masked respectively
@@ -157,8 +157,12 @@ def get_best_valid_action(q_vals, lane_mask):
     # an option so this decision should never be masked (for out simple
     # scenario at least where lanes don't reduce etc.)
     decision_mask = torch.cat((lane_mask, torch.BoolTensor([False])))
+
+    if decision_mask[0] == True or decision_mask[1] == True:
+        print('', end='')
+
     # bit dodgy but set q vals for any invalid decision to less than min
-    masked_q_vals = torch.where(decision_mask, q_vals.min()-.1, q_vals)
+    masked_q_vals = torch.where(decision_mask, q_vals.min() - .1, q_vals)
 
     best_action = torch.argmax(masked_q_vals).item()
     q_max = torch.max(masked_q_vals)
@@ -188,7 +192,8 @@ class DQNAgent:
     - decision: Current decision made by the RL agents
     """
 
-    def __init__(self, device, num_node_features, n_actions, speed_lim, gamma, target_copy_delay, learning_rate, batch_size,
+    def __init__(self, device, num_node_features, n_actions, speed_lim, gamma, target_copy_delay, learning_rate,
+                 batch_size,
                  epsilon, epsilon_dec=1e-3, epsilon_min=0.01, memory_size=1_000_000,
                  file_name='out/models/dqn_model.pt'):
         """
@@ -245,7 +250,6 @@ class DQNAgent:
         # Optimizer used to update the network parameters
         self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=learning_rate)
 
-
     def store_transition(self, state_features, action, reward, next_state_features, terminal_state):
         # TODO: We will need to store these vehicle features from inside the training loop
         # Fetches the most recent vehicle features, automatically refreshes each simulation step
@@ -275,7 +279,6 @@ class DQNAgent:
             The action to perform
         """
         state_features, lane_mask = preprocess_state_features(state_features, self.speed_lim)
-        print(state_features)
         decision_mask = lane_mask.tolist()
         # 0 is left, 1 is right, 2 is continue straight. straight is always
         # an option so this decision should never be masked (for out simple
@@ -304,7 +307,8 @@ class DQNAgent:
             return
 
         # Sample from the replay buffer
-        states, actions, rewards, new_states, terminals, lane_masks = self.replay_buffer.sample_transitions(self.batch_size)
+        states, actions, rewards, new_states, terminals, lane_masks = self.replay_buffer.sample_transitions(
+            self.batch_size)
 
         # Predict the Q-values in the current state, and in the new state (after taking the action)
         # Unfortunately we cannot do this in parallel
