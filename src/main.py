@@ -349,7 +349,7 @@ for j in range(0, N_episodes):
 
         # TODO: We can add the reward to the reward function in this loop
         # This just adds the difference of the velocity with the speed limit onto the reward sum
-        reward += min(0, feature_map_i[2][0][0] - ref_vx)
+        reward += feature_map_i[2][0][0] / ref_vx
 
         # Update traffic and store data
         X[:, i] = x_iter
@@ -362,6 +362,10 @@ for j in range(0, N_episodes):
             vehicleADV.update(x_iter, u_iter)
         except:
             print('Simulation finished: Crash occured')
+            # TODO: Choose reward function
+            buffer = RL_Agent.replay_buffer
+            idx = buffer.mem_counter % buffer.mem_size - 1
+            buffer.reward_mem[idx] = -10
             break
 
         # Termination conditions
@@ -377,8 +381,6 @@ for j in range(0, N_episodes):
             # Truck de-rails from road
             runSimulation = False
             print('Simulation finished: Derail Occured')
-        else:
-            i += 1
 
         traffic.tryRespawn(x_iter[0])
         X_traffic[:, i, :] = traffic.getStates()

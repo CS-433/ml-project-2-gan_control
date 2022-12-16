@@ -84,10 +84,10 @@ class GATQNetwork(torch.nn.Module):
         super(GATQNetwork, self).__init__()
 
         # Note: we already add self loops in the graph factory
-        self.gat1 = GATv2Conv(in_channels=num_node_features, out_channels=num_node_features, add_self_loops=False)
-        self.gat2 = GATv2Conv(in_channels=num_node_features, out_channels=num_node_features, add_self_loops=False)
+        self.gat1 = GATv2Conv(in_channels=num_node_features, out_channels=2 * num_node_features, add_self_loops=False)
+        self.gat2 = GATv2Conv(in_channels=2 * num_node_features, out_channels=4 * num_node_features, add_self_loops=False)
 
-        self.dense_1 = torch.nn.Linear(num_node_features, hidden_dim_size)
+        self.dense_1 = torch.nn.Linear(4 * num_node_features, hidden_dim_size)
         self.output_layer = torch.nn.Linear(hidden_dim_size, num_actions)
 
     def forward(self, state):
