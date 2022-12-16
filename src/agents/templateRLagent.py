@@ -9,7 +9,7 @@ import copy
 import numpy as np
 import torch
 import torch.nn.functional as F
-from torch_geometric.nn import GATConv
+from torch_geometric.nn import GATv2Conv
 
 from agents.graphs import GraphFactory, create_adjacency_matrix
 
@@ -84,7 +84,9 @@ class GATQNetwork(torch.nn.Module):
         super(GATQNetwork, self).__init__()
 
         # Note: we already add self loops in the graph factory
-        self.gat1 = GATConv(in_channels=num_node_features, out_channels=num_node_features, add_self_loops=False)
+        self.gat1 = GATv2Conv(in_channels=num_node_features, out_channels=num_node_features, add_self_loops=False)
+        self.gat2 = GATv2Conv(in_channels=num_node_features, out_channels=num_node_features, add_self_loops=False)
+
         self.dense_1 = torch.nn.Linear(num_node_features, hidden_dim_size)
         self.output_layer = torch.nn.Linear(hidden_dim_size, num_actions)
 
@@ -92,6 +94,7 @@ class GATQNetwork(torch.nn.Module):
         x, edge_index = state.x, state.edge_index
 
         x = F.relu(self.gat1(x, edge_index))
+        x = F.relu(self.gat2(x, edge_index))
 
         # Pick the truck feature embeddings (which we will use to put through the network)
         x = x[0]
