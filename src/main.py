@@ -83,6 +83,10 @@ ap.add_argument("-T", "--simulation_time", type=int, default=100,
 ap.add_argument("-E", "--exp_id", default='',
                 help=("Optional ID for the experiment"))
 
+ap.add_argument("--display_simulation",action="store_true",
+                    help=("If provided, the simulation will be plotted and " +
+                          "shown at each time step"))
+
 args = ap.parse_args()
 
 # -----------------------------------------------------
@@ -323,9 +327,10 @@ for j in range(0, N_episodes):
             # print('Step: ', i-i_crit)
             decisionMaster.storeInput([x_iter, refxL_out, refxR_out, refxT_out, refu_out, x_lead, traffic_state])
 
-            fig = plotScene(feature_map_i, scenarioADV, vehicleADV, vehList)
-            plt.show()
-            plt.pause(0.02)
+            if args.display_simulation:
+                fig = plotScene(feature_map_i, scenarioADV, vehicleADV, vehList)
+                plt.show()
+                plt.pause(0.02)
 
             # Experience replay for the RL agent, only None if we are at the first iteration
             if previous_state is not None:
