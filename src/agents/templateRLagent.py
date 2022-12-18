@@ -195,10 +195,10 @@ class DQNAgent:
     - decision: Current decision made by the RL agents
     """
 
-    def __init__(self, device, num_node_features, n_actions, speed_lim, gamma, target_copy_delay, learning_rate,
-                 batch_size,
-                 epsilon, epsilon_dec=1e-3, epsilon_min=0.01, memory_size=1_000_000,
-                 file_name='out/models/dqn_model.pt'):
+    def __init__(self, device, num_node_features, n_actions, speed_lim,
+                 gamma=0.9, target_copy_delay=0, learning_rate=10e-3,
+                 batch_size=32, epsilon=0.01, epsilon_dec=1e-3, epsilon_min=0.01,
+                 memory_size=1_000_000, file_name='out/models/dqn_model.pt'):
         """
         Args:
             device: CPU or GPU to put the data on (used for computations)
