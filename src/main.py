@@ -16,7 +16,7 @@ from traffic import vehicleSUMO, combinedTraffic
 from controllers import makeController, makeDecisionMaster
 from helpers import *
 
-from agents.templateRLagent import DQNAgent
+from agents.rlagent import DQNAgent
 
 np.random.seed(1)
 

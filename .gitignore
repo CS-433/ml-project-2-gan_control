@@ -2,7 +2,7 @@ _pychache_
 __pycache__
 .venv
 simData.csv
-simRes.gif
+res/simRes.gif
 
 out/runs
 
