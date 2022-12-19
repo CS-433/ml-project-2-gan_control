@@ -1,4 +1,4 @@
-# Machine Learning Project 2: Autonomous lane changing using Deep Reinforcement Learning with Graph Neural Networks
+# Machine Learning Project 2: Autonomous Lane Changing using Deep Reinforcement Learning with Graph Neural Networks
 
 ![](https://github.com/BorveErik/Autonomous-Truck-Sim/blob/RL_training_env/simRes.gif)
 
@@ -121,6 +121,9 @@ trained agent model.
 > This is the directory that contains all the source code for this project
 
 ### Arguments for executable files
+
+@TODO: Somesh
+@TODO: Could you also mention how you can reproduce the experiments with the seed? And which seed we used I guess
 
 #### main.py
 
