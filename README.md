@@ -4,7 +4,7 @@
 
 **Authors:** Arvind Satish Menon, Lars C.P.M. Quaedvlieg, and Somesh Mehra
 
-**Supervisor:** [Erik Börve](mailto://borerik@chalmers.se) 
+**Supervisor:** [Erik Börve](mailto://borerik@chalmers.se)
 
 **Group:** GAN_CONTROL
 
@@ -14,14 +14,14 @@
 
 ## Project introduction
 
-In recent years, autonomous vehicles have garnered significant attention due to their potential to improve the safety, 
-efficiency, and accessibility of transportation. One important aspect of autonomous driving is the ability to make 
-lane-changing decisions, which requires the vehicle to predict the intentions and behaviors of other road users and to 
-evaluate the safety and feasibility of different actions. 
+In recent years, autonomous vehicles have garnered significant attention due to their potential to improve the safety,
+efficiency, and accessibility of transportation. One important aspect of autonomous driving is the ability to make
+lane-changing decisions, which requires the vehicle to predict the intentions and behaviors of other road users and to
+evaluate the safety and feasibility of different actions.
 
-In this project, we propose a graph neural network (GNN) architecture combined with reinforcement learning (RL) and a model 
-predictive controller to solve the problem of autonomous lane changing. By using GNNs, it is possible to learn a control 
-policy that takes into account the complex and dynamic relationships between the vehicles, rather than just considering 
+In this project, we propose a graph neural network (GNN) architecture combined with reinforcement learning (RL) and a model
+predictive controller to solve the problem of autonomous lane changing. By using GNNs, it is possible to learn a control
+policy that takes into account the complex and dynamic relationships between the vehicles, rather than just considering
 local features or patterns. More specifically, we employ Deep Q-learning with Graph Attention Networks for the agent.
 
 **Please note that not all the code is the work of this project group**. We will use a basis provided by our supervisor
@@ -31,7 +31,7 @@ However, we will also mention our contributions to every individual file further
 From the repository linked above:
 
 >  This project provides an implementation of an autonomous truck in a multi-lane highway scenario. The controller utilizes
- non-linear optimal control to compute multiple feasible trajectories, of which the most cost-efficent is choosen. The 
+ non-linear optimal control to compute multiple feasible trajectories, of which the most cost-efficent is choosen. The
  simulation is set up to be suitable for RL training.
 
 ## Getting Started
@@ -45,9 +45,9 @@ Locate the repository and run:
   pip install -r requirements.txt
   ```
 
-**Additionally**, you need to install Pytorch and Pytorch Geometric separately. please note that for installing 
+**Additionally**, you need to install Pytorch and Pytorch Geometric separately. please note that for installing
 [Pytorch](https://pytorch.org/get-started/locally/) and [Pytorch Geometric](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html),
-please refer to the references installation guides for CPU or GPU and ensure that a *compatible version* of Pytorch has 
+please refer to the references installation guides for CPU or GPU and ensure that a *compatible version* of Pytorch has
 been installed for Pytorch Geometric.
 
 | Package             | Use                         |
@@ -62,7 +62,7 @@ been installed for Pytorch Geometric.
 
 ### Usage
 
-The RL model can be trained using a certain configuration (see format below) via the "main.py" file. This is also where 
+The RL model can be trained using a certain configuration (see format below) via the "main.py" file. This is also where
 simulations are configured, including e.g., designing traffic scenarios and setting up the optimal controllers.
 
 Next, the "inference.py" file allows you to perform inference using certain configurations of the environment and a
@@ -122,19 +122,112 @@ trained agent model.
 
 ### Arguments for executable files
 
-@TODO: Somesh
-@TODO: Could you also mention how you can reproduce the experiments with the seed? And which seed we used I guess
-
 #### main.py
 
+To run this script, at a minimum you must provide a hyperparameter configuration file in json format, specified with the -H flag. We have provided an example file containing the hyperparameters we used for our final model, meaning the script can be run directly from inside the src folder with the following command:
+
 ```bash
-python main.py -H ...
+$ python main.py -H ../res/model_hyperparams/example_hyperparams.json
 ```
+
+_Note: this assumes that the out/runs folder exists in the repo (which it should after cloning). If not, you can specify an alternate log directory with the -l flag, where all outputs will be saved._
+
+It is also recommended, but not necessary, to provide an experiment ID with the -E flag, to make it easier to locate the results of your experiment in the log directory. The result are saved in the log directory in a folder named as <experiment_ID>_<timestamp>.
+
+The full list of input arguments for this script is shown below, and the remaining arguments have defaults but can be used to change various simulation parameters.
+
+```bash
+$ python main.py -h
+
+usage: main.py [-h] -H HYPERPARAM_CONFIG [-l LOG_DIR] [-e NUM_EPISODES]
+               [-d MAX_DIST] [-t TIME_STEP] [-f CONTROLLER_FREQUENCY]
+               [-s SPEED_LIMIT] [-N HORIZON_LENGTH] [-T SIMULATION_TIME]
+               [-E EXP_ID] [--display_simulation]
+
+Train DeepQN RL agent for lane changing decisions
+
+options:
+  -h, --help            show this help message and exit
+  -H HYPERPARAM_CONFIG, --hyperparam_config HYPERPARAM_CONFIG
+                        Path to json file containing the hyperparameters for
+                        training the GNN. Must define the following
+                        hyperparameters: gamma (float), target_copy_delay
+                        (int), learning_rate (float), batch_size (int),
+                        epsilon (float), epsilon_dec (float), epsilon_min
+                        (float), memory_size (int)
+  -l LOG_DIR, --log_dir LOG_DIR
+                        Directory in which to store logs. Default ../out/runs
+  -e NUM_EPISODES, --num_episodes NUM_EPISODES
+                        Number of episodes to run simulation for. Default 100
+  -d MAX_DIST, --max_dist MAX_DIST
+                        Goal distance for vehicle to travel. Simulation
+                        terminates if this is reached. Default 500m
+  -t TIME_STEP, --time_step TIME_STEP
+                        Simulation time step. Default 0.2s
+  -f CONTROLLER_FREQUENCY, --controller_frequency CONTROLLER_FREQUENCY
+                        Controller update frequency. Updates at each f
+                        timesteps. Default 5
+  -s SPEED_LIMIT, --speed_limit SPEED_LIMIT
+                        Highway speed limit (km/h). Default 60
+  -N HORIZON_LENGTH, --horizon_length HORIZON_LENGTH
+                        MPC horizon length. Default 12
+  -T SIMULATION_TIME, --simulation_time SIMULATION_TIME
+                        Maximum total simulation time (s). Default 100
+  -E EXP_ID, --exp_id EXP_ID
+                        Optional ID for the experiment
+  --display_simulation  If provided, the simulation will be plotted and shown
+                        at each time step
+```
+
+**This script has a hard-coded seed, thus to reproduce any experiments you simply need to provide the same hyperparameter configurations and input arguments to the script. For each experiment, we save all the experiment parameters (including hyperparameter configurations) inside the experiment log folder, in a file called experiment_parameters.json**
 
 #### inference.py
 
+At a minimum, this script requires you to specify the log directory where all results are saved, and the ID of the experiment which was used to train the model you want to perform inference with. As mentioned before, directly cloning the repo should include an out/runs folder, which is the default log directory in both main.py and inference.py. If you used a different log directory, you can specify it with the -l argument. Otherwise, the only argument you have to provide is the experiment ID using the -E flag. Note that this should be the entire folder name (including the timestamp if it's there), and the folder must contain a file named final_model.pt (which is automatically output by main.py). Thus the script can be run directly from inside the src folder as such:
+
+
 ```bash
-python inference.py -H ...
+$ python inference.py -E <experiment_ID>_<timestamp>
+```
+
+The full list of input arguments is shown below. The remaining arguments have defaults but can be used to change various simulation parameters.
+
+```bash
+$ python inference.py -h
+
+usage: inference.py [-h] [-E EXP_ID] [-l LOG_DIR] [-e NUM_EPISODES]
+                    [-d MAX_DIST] [-t TIME_STEP] [-f CONTROLLER_FREQUENCY]
+                    [-s SPEED_LIMIT] [-N HORIZON_LENGTH] [-T SIMULATION_TIME]
+                    [--display_simulation]
+
+Simulate truck driving scenarios using trained DQN agent for lane change
+decisions
+
+options:
+  -h, --help            show this help message and exit
+  -E EXP_ID, --exp_id EXP_ID
+                        ID of the experiment who's model we want to use
+  -l LOG_DIR, --log_dir LOG_DIR
+                        Directory in which logs are stored. Default
+                        ../out/runs
+  -e NUM_EPISODES, --num_episodes NUM_EPISODES
+                        Number of episodes to run simulation for. Default 100
+  -d MAX_DIST, --max_dist MAX_DIST
+                        Goal distance for vehicle to travel. Simulation
+                        terminates if this is reached. Default 500m
+  -t TIME_STEP, --time_step TIME_STEP
+                        Simulation time step. Default 0.2s
+  -f CONTROLLER_FREQUENCY, --controller_frequency CONTROLLER_FREQUENCY
+                        Controller update frequency. Updates at each f
+                        timesteps. Default 5
+  -s SPEED_LIMIT, --speed_limit SPEED_LIMIT
+                        Highway speed limit (km/h). Default 60
+  -N HORIZON_LENGTH, --horizon_length HORIZON_LENGTH
+                        MPC horizon length. Default 12
+  -T SIMULATION_TIME, --simulation_time SIMULATION_TIME
+                        Maximum total simulation time (s). Default 100
+  --display_simulation  If provided, the simulation will be plotted and shown
+                        at each time step
 ```
 
 
