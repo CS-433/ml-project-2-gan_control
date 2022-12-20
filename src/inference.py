@@ -257,6 +257,11 @@ import matplotlib
 matplotlib.use('qt5Agg')
 matplotlib.pyplot.ion()
 
+total_distance = 0
+num_derails = 0
+num_crashes = 0
+sum_speeds = 0
+
 # # Episode iteration
 for j in range(0, N_episodes):
     print("Episode: ", j + 1)
@@ -289,6 +294,8 @@ for j in range(0, N_episodes):
         # Record the velocity of the vehicle
         writer.add_scalars('Overall/Velocity', {'Velocity': feature_map_i[2][0][0],
                                                 'Maximum Velocity': ref_vx}, overall_iters)
+
+        sum_speeds += feature_map_i[2][0][0]
 
         # Initialize master controller
         if (i - i_crit) % f_controller == 0:
@@ -332,6 +339,7 @@ for j in range(0, N_episodes):
             vehicleADV.update(x_iter, u_iter)
         except:
             print('Simulation finished: Crash occured')
+            num_crashes += 1
             writer.add_scalar('Overall/Crash_1_Derail_2', 1, overall_iters)
             break
 
@@ -350,6 +358,7 @@ for j in range(0, N_episodes):
             # Truck de-rails from road
             runSimulation = False
             print('Simulation finished: Derail Occured')
+            num_derails += 1
             writer.add_scalar('Overall/Crash_1_Derail_2', 2, overall_iters)
         else:
             i += 1
@@ -364,6 +373,8 @@ for j in range(0, N_episodes):
     writer.add_scalar('Overall/Episode_Iterations', eps_iters, j)
     writer.add_scalar('Overall/Episode_Distances', x_iter[0].full().item(), j)
 
+    total_distance += x_iter[0].full().item()
+
     i_crit = i
 
     # Prepare for next simulation
@@ -372,6 +383,20 @@ for j in range(0, N_episodes):
     X_traffic_ref[:, i, :] = traffic.getReference()
 
 print("Simulation finished")
+
+inference_summary = {
+    'avg_distance': (total_distance / N_episodes),
+    'avg_speed': (sum_speeds / overall_iters),
+    'total_derails': num_derails,
+    'total_crashes': num_crashes,
+    'num_episodes': N_episodes
+}
+
+# save summary results to a json file
+results_file = os.path.join(exp_log_dir, 'inference_results.json')
+with open(results_file, 'w', encoding='utf-8') as f:
+    json.dump(inference_summary, f, ensure_ascii=False, indent=4)
+print(f"Saved inference results {results_file}")
 
 # -----------------------------------------------------------------
 # -----------------------------------------------------------------
