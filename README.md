@@ -132,7 +132,7 @@ $ python main.py -H ../res/model_hyperparams/example_hyperparams.json
 
 _Note: this assumes that the out/runs folder exists in the repo (which it should after cloning). If not, you can specify an alternate log directory with the -l flag, where all outputs will be saved._
 
-It is also recommended, but not necessary, to provide an experiment ID with the -E flag, to make it easier to locate the results of your experiment in the log directory. The result are saved in the log directory in a folder named as <experiment_ID>_<timestamp>.
+It is also recommended, but not necessary, to provide an experiment ID with the -E flag, to make it easier to locate the results of your experiment in the log directory. The result are saved in the log directory in a folder named as {experiment_ID}_{timestamp}.
 
 The full list of input arguments for this script is shown below, and the remaining arguments have defaults but can be used to change various simulation parameters.
 
@@ -179,7 +179,7 @@ options:
                         at each time step
 ```
 
-**This script has a hard-coded seed, thus to reproduce any experiments you simply need to provide the same hyperparameter configurations and input arguments to the script. For each experiment, we save all the experiment parameters (including hyperparameter configurations) inside the experiment log folder, in a file called experiment_parameters.json**
+_This script has a hard-coded seed, thus to reproduce any experiments you simply need to provide the same hyperparameter configurations and input arguments to the script. For each experiment, we save all the experiment parameters (including hyperparameter configurations) inside the experiment log folder, in a file called experiment_parameters.json_
 
 #### inference.py
 
