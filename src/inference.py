@@ -261,6 +261,7 @@ total_distance = 0
 num_derails = 0
 num_crashes = 0
 sum_speeds = 0
+total_decision_time = 0
 
 # # Episode iteration
 for j in range(0, N_episodes):
@@ -317,8 +318,14 @@ for j in range(0, N_episodes):
 
             writer.add_scalar('Overall/Rewards', reward, overall_iters)
 
+            # time how long it takes to make the decision
+            start = time.time()
             # Compute optimal control action
             x_test, u_test, X_out, selected_action = decisionMaster.chooseController(feature_map_i)
+            # accumulate decision time to calculate average
+            end = time.time()
+            total_decision_time += (end - start)
+
             u_iter = u_test[:, 0]
 
             # Update the state for the RL agent, reset the reward to be accumulated
@@ -389,7 +396,8 @@ inference_summary = {
     'avg_speed': (sum_speeds / overall_iters),
     'total_derails': num_derails,
     'total_crashes': num_crashes,
-    'num_episodes': N_episodes
+    'num_episodes': N_episodes,
+    'avg_decision_time': (total_decision_time / overall_iters)
 }
 
 # save summary results to a json file
