@@ -288,6 +288,10 @@ matplotlib.pyplot.ion()
 
 # # Episode iteration
 for j in range(0, N_episodes):
+
+    # close any open matplotlib figures
+    plt.close('all')
+
     print("Episode: ", j + 1)
     # # Initialize simulation
     x_iter = DM(int(nx), 1)
