@@ -400,6 +400,9 @@ for j in range(0, N_episodes):
     writer.add_scalar('Overall/Episode_Iterations', eps_iters, j)
     writer.add_scalar('Overall/Episode_Distances', x_iter[0].full().item(), j)
 
+    RL_Agent.save_model(os.path.join(exp_log_dir, 'model_checkpoint.pt'))
+
+
     i_crit = i
 
     # Prepare for next simulation
