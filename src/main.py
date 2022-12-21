@@ -305,6 +305,8 @@ for j in range(0, N_episodes):
     action = None
     reward = 0
 
+    eps_return = 0
+
     while runSimulation:
 
         # Update feature map for RL agent
@@ -335,12 +337,12 @@ for j in range(0, N_episodes):
             # Experience replay for the RL agent, only None if we are at the first iteration
             if previous_state is not None:
                 reward /= f_controller
+                eps_return += reward
                 RL_Agent.store_transition(previous_state, action, reward, feature_map_i, terminal_state=False)
 
             # Update reference based on current lane
             refxL_out, refxR_out, refxT_out = decisionMaster.updateReference()
 
-            writer.add_scalar('Overall/Rewards', reward, overall_iters)
             writer.add_scalar('Episode_' + str(j) + '/Rewards', reward, eps_iters)
 
             RL_Agent.learn()
@@ -394,6 +396,7 @@ for j in range(0, N_episodes):
         eps_iters += 1
         overall_iters += 1
 
+    writer.add_scalar('Overall/Average_Rewards', eps_return/eps_iters, overall_iters)
     writer.add_scalar('Overall/Episode_Iterations', eps_iters, j)
     writer.add_scalar('Overall/Episode_Distances', x_iter[0].full().item(), j)
 
