@@ -1,10 +1,10 @@
 {
   "gamma": 0.9,
-  "target_copy_delay": 0,
+  "target_copy_delay": 5,
   "learning_rate": 10e-3,
   "batch_size": 32,
-  "epsilon": 0.01,
+  "epsilon": 0.1,
   "epsilon_dec": 1e-3,
   "epsilon_min": 0.01,
-  "memory_size": 1000000
+  "memory_size": 100000
 }
