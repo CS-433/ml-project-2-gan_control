@@ -358,8 +358,7 @@ for j in range(0, N_episodes):
             # Update the state for the RL agent, reset the reward to be accumulated
             previous_state, action, reward = feature_map_i, selected_action, 0
 
-        # TODO: We can add the reward to the reward function in this loop
-        # This just adds the difference of the velocity with the speed limit onto the reward sum
+        # This just adds the proportion of the velocity with the speed limit onto the reward sum
         reward += feature_map_i[2][0][0] / ref_vx
 
         # Update traffic and store data
@@ -373,7 +372,6 @@ for j in range(0, N_episodes):
             vehicleADV.update(x_iter, u_iter)
         except:
             print('Simulation finished: Crash occured')
-            # TODO: Choose reward function
             buffer = RL_Agent.replay_buffer
             idx = buffer.mem_counter % buffer.mem_size - 1
             buffer.reward_mem[idx] = -10
