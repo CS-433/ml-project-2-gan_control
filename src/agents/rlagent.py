@@ -74,7 +74,6 @@ class ReplayBuffer:
         self.lane_mask = torch.zeros((self.mem_size, 2), dtype=torch.bool)
 
 
-# TODO: This is just an example configuration, we need to see what we actually want to do!
 class GATQNetwork(torch.nn.Module):
     """
     Defines the neural network used by the Deep Q-Learning agent
@@ -202,7 +201,7 @@ class DQNAgent:
         """
         Args:
             device: CPU or GPU to put the data on (used for computations)
-            input_shape: The dimensionality of the observation space
+            num_node_features: The number of features for each vehicle
             n_actions: The number of possible actions
             speed_lim: Speed limit of highway/road
             gamma: The discount factor
@@ -254,7 +253,6 @@ class DQNAgent:
         self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=learning_rate)
 
     def store_transition(self, state_features, action, reward, next_state_features, terminal_state):
-        # TODO: We will need to store these vehicle features from inside the training loop
         # Fetches the most recent vehicle features, automatically refreshes each simulation step
         # The features are as follows:
         # size(features) = (#features, 1, #vehicles + 1) where "+1" comes from the truck
