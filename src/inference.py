@@ -49,9 +49,9 @@ ap.add_argument("-l", "--log_dir", default='../out/runs',
 ap.add_argument("-e", "--num_episodes", type=int, default=100,
                 help=("Number of episodes to run simulation for. Default 100"))
 
-ap.add_argument("-d", "--max_dist", type=int, default=500,
+ap.add_argument("-d", "--max_dist", type=int, default=10000,
                 help=("Goal distance for vehicle to travel. Simulation " +
-                      "terminates if this is reached. Default 500m"))
+                      "terminates if this is reached. Default 10000m"))
 
 ap.add_argument("-t", "--time_step", type=float, default=0.2,
                 help=("Simulation time step. Default 0.2s"))

@@ -161,7 +161,7 @@ options:
                         Number of episodes to run simulation for. Default 100
   -d MAX_DIST, --max_dist MAX_DIST
                         Goal distance for vehicle to travel. Simulation
-                        terminates if this is reached. Default 500m
+                        terminates if this is reached. Default 10000m
   -t TIME_STEP, --time_step TIME_STEP
                         Simulation time step. Default 0.2s
   -f CONTROLLER_FREQUENCY, --controller_frequency CONTROLLER_FREQUENCY
@@ -214,7 +214,7 @@ options:
                         Number of episodes to run simulation for. Default 100
   -d MAX_DIST, --max_dist MAX_DIST
                         Goal distance for vehicle to travel. Simulation
-                        terminates if this is reached. Default 500m
+                        terminates if this is reached. Default 10000m
   -t TIME_STEP, --time_step TIME_STEP
                         Simulation time step. Default 0.2s
   -f CONTROLLER_FREQUENCY, --controller_frequency CONTROLLER_FREQUENCY
