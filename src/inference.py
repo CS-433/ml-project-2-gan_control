@@ -263,12 +263,14 @@ num_crashes = 0
 sum_speeds = 0
 total_decision_time = 0
 
+action_counts = [0,0,0]
+
 # # Episode iteration
 for j in range(0, N_episodes):
 
     # close any open matplotlib figures
     plt.close('all')
-    
+
     print("Episode: ", j + 1)
     # # Initialize simulation
     x_iter = DM(int(nx), 1)
@@ -329,6 +331,9 @@ for j in range(0, N_episodes):
             # accumulate decision time to calculate average
             end = time.time()
             total_decision_time += (end - start)
+
+            writer.add_scalar(f"Episode_{j}/Decision", selected_action, eps_iters)
+            action_counts[selected_action] += 1
 
             u_iter = u_test[:, 0]
 
@@ -395,13 +400,18 @@ for j in range(0, N_episodes):
 
 print("Simulation finished")
 
+total_actions = sum(action_counts)
+
 inference_summary = {
     'avg_distance': (total_distance / N_episodes),
     'avg_speed': (sum_speeds / overall_iters),
     'total_derails': num_derails,
     'total_crashes': num_crashes,
     'num_episodes': N_episodes,
-    'avg_decision_time': (total_decision_time / overall_iters)
+    'avg_decision_time': (total_decision_time / overall_iters),
+    'prop_left_decisions': action_counts[0] / total_actions,
+    'prop_right_decisions': action_counts[1] / total_actions,
+    'prop_no_change_decisions': action_counts[2] / total_actions
 }
 
 # save summary results to a json file
