@@ -183,12 +183,14 @@ _This script has a hard-coded seed, thus to reproduce any experiments you simply
 
 #### inference.py
 
-At a minimum, this script requires you to specify the log directory where all results are saved, and the ID of the experiment which was used to train the model you want to perform inference with. As mentioned before, directly cloning the repo should include an out/runs folder, which is the default log directory in both main.py and inference.py. If you used a different log directory, you can specify it with the -l argument. Otherwise, the only argument you have to provide is the experiment ID using the -E flag. Note that this should be the entire folder name (including the timestamp if it's there), and the folder must contain a file named final_model.pt (which is automatically output by main.py). As an example, the the script can be run directly from inside the src folder as follows, to use the example experiment directory provided:
+At a minimum, this script requires you to specify the log directory where all results are saved, and the ID of the experiment which was used to train the model you want to perform inference with. As mentioned before, directly cloning the repo should include an out/runs folder, which is the default log directory in both main.py and inference.py. If you used a different log directory, you can specify it with the -l argument. Otherwise, the only argument you have to provide is the experiment ID using the -E flag. Note that this should be the entire folder name (including the timestamp if it's there), and the folder must contain a file named final_model.pt (which is automatically output by main.py). As an example, the the script can be run directly from inside the src folder as follows, using the example experiment directory provided:
 
 
 ```bash
-$ python inference.py -E example
+$ python inference.py -E example -e 30 -T 30
 ```
+
+This command will run the simulation for 30 episodes of 30s each.
 
 The full list of input arguments is shown below. The remaining arguments have defaults but can be used to change various simulation parameters.
 
